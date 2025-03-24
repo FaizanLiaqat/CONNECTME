@@ -32,16 +32,11 @@ class StoryFragment : Fragment() {
         storyRecyclerView = view.findViewById(R.id.story_recycler_view)
         storyRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
 
-        // Initialize adapter.
-        storyAdapter = StoryAdapter(
-            stories,
-            auth.currentUser?.uid ?: "",
-            onStoryClick = { story -> openStoryViewer(story) },
-            onAddStoryClick = { openStoryCreator() }
-        )
+        // Initialize adapter
+        storyAdapter = StoryAdapter(stories, auth.currentUser?.uid ?: "", ::openStoryViewer, ::openStoryCreator)
         storyRecyclerView.adapter = storyAdapter
 
-        // Load stories from Firebase.
+        // Load stories from Firebase
         loadStories()
 
         return view
@@ -49,42 +44,39 @@ class StoryFragment : Fragment() {
 
     private fun loadStories() {
         val currentUserId = auth.currentUser?.uid ?: return
-        val usersRef = database.getReference("users/$currentUserId/following")
+        val usersRef = database.getReference("following/$currentUserId")
 
         usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val followedUsers = snapshot.children.mapNotNull { it.key }.toMutableList()
-                followedUsers.add(currentUserId) // Include the current user's story
+                followedUsers.add(currentUserId) // Include current user’s story
 
-                storiesReference.orderByChild("timestamp")
-                    .startAt(System.currentTimeMillis() - 24 * 60 * 60 * 1000.toDouble())
-                    .addValueEventListener(object : ValueEventListener {
-                        override fun onDataChange(snapshot: DataSnapshot) {
-                            stories.clear()
-                            for (storySnapshot in snapshot.children) {
-                                val story = storySnapshot.getValue(StoryModel::class.java)
-                                if (story != null && followedUsers.contains(story.userId)) {
-                                    stories.add(story)
-                                }
+                storiesReference.addListenerForSingleValueEvent(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        stories.clear()
+                        val currentTime = System.currentTimeMillis()
+                        for (storySnapshot in snapshot.children) {
+                            val story = storySnapshot.getValue(StoryModel::class.java)
+                            if (story != null && followedUsers.contains(story.userId) && currentTime - story.timestamp <= 24 * 60 * 60 * 1000) {
+                                stories.add(story)
                             }
-                            val userStories = stories.groupBy { it.userId }
-                                .map { (_, stories) -> stories.maxByOrNull { it.timestamp } ?: stories.first() }
-                                .sortedByDescending { it.timestamp }
-
-                            storyAdapter.updateStories(userStories)
                         }
+                        val userStories = stories.groupBy { it.userId }
+                            .map { (_, stories) -> stories.maxByOrNull { it.timestamp } ?: stories.first() }
+                            .sortedByDescending { it.timestamp }
 
-                        override fun onCancelled(error: DatabaseError) {}
-                    })
+                        storyAdapter.updateStories(userStories)
+                    }
+                    override fun onCancelled(error: DatabaseError) {}
+                })
             }
-
             override fun onCancelled(error: DatabaseError) {}
         })
     }
 
     private fun openStoryViewer(story: StoryModel) {
-        val currentUserId = auth.currentUser?.uid
-        if (currentUserId != null && !story.viewedBy.containsKey(currentUserId)) {
+        val currentUserId = auth.currentUser?.uid ?: return
+        if (!story.viewedBy.containsKey(currentUserId)) {
             storiesReference.child(story.id).child("viewedBy").child(currentUserId).setValue(true)
         }
         val intent = Intent(context, StoryViewerActivity::class.java)

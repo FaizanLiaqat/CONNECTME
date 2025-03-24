@@ -17,7 +17,6 @@ class StoryAdapter(
     private val onAddStoryClick: () -> Unit
 ) : RecyclerView.Adapter<StoryAdapter.StoryViewHolder>() {
 
-    // Cache the current user's profile image URL.
     private var currentUserProfileImageUrl: String = ""
 
     class StoryViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -34,11 +33,9 @@ class StoryAdapter(
 
     override fun onBindViewHolder(holder: StoryViewHolder, position: Int) {
         if (position == 0) {
-            // "Add Story" cell: load current user's profile image.
             if (currentUserProfileImageUrl.isNotEmpty()) {
                 loadImage(holder.storyImage, currentUserProfileImageUrl)
             } else {
-                // Query Firebase for the current user's profile image.
                 val userRef = FirebaseDatabase.getInstance().getReference("users").child(currentUserId)
                 userRef.child("profileImageUrl").addListenerForSingleValueEvent(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
@@ -50,23 +47,18 @@ class StoryAdapter(
                             holder.storyImage.setImageResource(R.drawable.profile_placeholder)
                         }
                     }
-                    override fun onCancelled(error: DatabaseError) {
-                        holder.storyImage.setImageResource(R.drawable.profile_placeholder)
-                    }
+                    override fun onCancelled(error: DatabaseError) {}
                 })
             }
-            // Show "Add Story" UI elements.
             holder.plusIconContainer.visibility = View.VISIBLE
             holder.plusIcon.visibility = View.VISIBLE
             holder.storyBorder.visibility = View.GONE
             holder.itemView.setOnClickListener { onAddStoryClick() }
         } else {
-            // Regular story items (adjust index by subtracting one).
             val story = stories[position - 1]
             holder.plusIconContainer.visibility = View.GONE
             holder.plusIcon.visibility = View.GONE
             val hasViewed = story.viewedBy.containsKey(currentUserId)
-            holder.storyBorder.visibility = View.VISIBLE
             holder.storyBorder.setImageResource(
                 if (hasViewed) R.drawable.circle_outline else R.drawable.story_unviewed_border
             )
@@ -87,7 +79,6 @@ class StoryAdapter(
         notifyDataSetChanged()
     }
 
-    // Helper function to load image from Base64.
     private fun loadImage(imageView: ImageView, imageData: String) {
         if (imageData.isEmpty()) {
             imageView.setImageResource(R.drawable.profile_placeholder)
@@ -102,4 +93,3 @@ class StoryAdapter(
         }
     }
 }
-

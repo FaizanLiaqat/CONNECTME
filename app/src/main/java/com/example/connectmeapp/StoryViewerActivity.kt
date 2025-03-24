@@ -34,11 +34,13 @@ class StoryViewerActivity : AppCompatActivity() {
     private var userId: String? = null
     private var timer: CountDownTimer? = null
 
+    private var userStories = mutableListOf<StoryModel>()
+    private var currentStoryIndex = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_story_viewer)
 
-        // Get intent extras
         storyId = intent.getStringExtra("STORY_ID")
         userId = intent.getStringExtra("USER_ID")
 
@@ -48,32 +50,27 @@ class StoryViewerActivity : AppCompatActivity() {
             return
         }
 
-        // Initialize Firebase
         auth = FirebaseAuth.getInstance()
         database = FirebaseDatabase.getInstance()
         storiesReference = database.getReference("stories")
 
-        // Initialize views
         storyImage = findViewById(R.id.story_image)
         progressBar = findViewById(R.id.progress_bar)
         usernameText = findViewById(R.id.username_text)
         closeButton = findViewById(R.id.close_button)
 
-        // Set click listener for close button
         closeButton.setOnClickListener { finish() }
 
-        // Load the story
-        loadStory()
+        loadUserStories()
     }
 
-    private fun loadStory() {
+    private fun loadUserStories() {
         progressBar.visibility = View.VISIBLE
 
-        // Query all stories for this user
-        val query = storiesReference.orderByChild("userId").equalTo(userId)
-        query.addListenerForSingleValueEvent(object : ValueEventListener {
+        val userStoryRef = storiesReference.child(userId!!)
+        userStoryRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val userStories = mutableListOf<StoryModel>()
+                userStories.clear()
 
                 for (storySnapshot in snapshot.children) {
                     val story = storySnapshot.getValue(StoryModel::class.java)
@@ -82,51 +79,30 @@ class StoryViewerActivity : AppCompatActivity() {
                     }
                 }
 
-                // Sort stories by timestamp (newest first)
                 userStories.sortByDescending { it.timestamp }
 
                 if (userStories.isNotEmpty()) {
-                    // Find the current story or use the first one
-                    val currentStoryIndex = userStories.indexOfFirst { it.id == storyId }
-                    val currentStory = if (currentStoryIndex >= 0) {
-                        userStories[currentStoryIndex]
-                    } else {
-                        userStories.first()
-                    }
+                    currentStoryIndex = userStories.indexOfFirst { it.id == storyId }
+                    if (currentStoryIndex == -1) currentStoryIndex = 0
 
-                    // Display the story
-                    displayStory(currentStory)
-
-                    // Mark story as viewed
-                    val currentUserId = auth.currentUser?.uid
-                    if (currentUserId != null && !currentStory.viewedBy.contains(currentUserId)) {
-                        storiesReference.child(currentStory.id).child("viewedBy")
-                            .child(currentUserId).setValue(true)
-                    }
-
-                    // Start auto-dismiss timer (5 seconds per story)
-                    startStoryTimer()
+                    displayStory(userStories[currentStoryIndex])
                 } else {
-                    Toast.makeText(this@StoryViewerActivity, "No stories available",
-                        Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@StoryViewerActivity, "No stories available", Toast.LENGTH_SHORT).show()
                     finish()
                 }
             }
 
             override fun onCancelled(error: DatabaseError) {
                 progressBar.visibility = View.GONE
-                Toast.makeText(this@StoryViewerActivity, "Error loading story: ${error.message}",
-                    Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@StoryViewerActivity, "Error loading story: ${error.message}", Toast.LENGTH_SHORT).show()
                 finish()
             }
         })
     }
 
     private fun displayStory(story: StoryModel) {
-        // Display username
         usernameText.text = story.username
 
-        // Display the story image
         if (story.imageBase64.isNotEmpty()) {
             try {
                 val imageBytes = Base64.decode(story.imageBase64, Base64.DEFAULT)
@@ -139,19 +115,30 @@ class StoryViewerActivity : AppCompatActivity() {
             storyImage.setImageResource(R.drawable.profile_placeholder)
         }
 
+        markStoryAsViewed(story.id)
         progressBar.visibility = View.GONE
+        startStoryTimer()
+    }
+
+    private fun markStoryAsViewed(storyId: String) {
+        val currentUserId = auth.currentUser?.uid ?: return
+        val viewedByRef = storiesReference.child(userId!!).child(storyId).child("viewedBy").child(currentUserId)
+        viewedByRef.setValue(true)
     }
 
     private fun startStoryTimer() {
         timer?.cancel()
 
         timer = object : CountDownTimer(5000, 5000) {
-            override fun onTick(millisUntilFinished: Long) {
-                // Not needed
-            }
+            override fun onTick(millisUntilFinished: Long) {}
 
             override fun onFinish() {
-                finish()
+                if (currentStoryIndex < userStories.size - 1) {
+                    currentStoryIndex++
+                    displayStory(userStories[currentStoryIndex])
+                } else {
+                    finish()
+                }
             }
         }.start()
     }

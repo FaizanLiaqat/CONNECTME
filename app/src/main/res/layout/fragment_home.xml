@@ -34,18 +34,46 @@
             android:src="@drawable/send_icon" />
     </RelativeLayout>
 
-    <!-- Story Container: We'll embed StoryFragment here -->
+    <!-- Story Container with Progress Bar -->
     <FrameLayout
-        android:id="@+id/story_container"
         android:layout_width="match_parent"
-        android:layout_height="100dp" />
+        android:layout_height="100dp">
 
-    <!-- Posts RecyclerView -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/posts_recycler_view"
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/stories_recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="8dp"
+            android:orientation="horizontal"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:listitem="@layout/story_item" />
+
+        <ProgressBar
+            android:id="@+id/stories_progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <!-- Posts RecyclerView with Progress Bar -->
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="8dp"
-        tools:listitem="@layout/post_item" />
+        android:layout_height="match_parent">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/posts_recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="8dp"
+            tools:listitem="@layout/post_item" />
+
+        <ProgressBar
+            android:id="@+id/posts_progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
+    </FrameLayout>
 
 </LinearLayout>

@@ -1,6 +1,7 @@
 package com.example.connectmeapp
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.ProgressDialog
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -10,6 +11,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Base64
 import android.util.Log
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
@@ -39,6 +42,8 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var switchCameraButton: ImageView
     private lateinit var closeButton: ImageView
     private lateinit var galleryIcon: ImageView
+    private lateinit var storyText: TextView ////
+    private lateinit var postText: TextView
 
     private lateinit var imageCapture: ImageCapture
     private var cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -75,26 +80,20 @@ class CameraActivity : AppCompatActivity() {
         database = FirebaseDatabase.getInstance()
         storiesReference = database.getReference("stories")
 
-        // Determine mode based on intent extra ("IS_STORY")
-        isStoryMode = intent.getBooleanExtra("IS_STORY", false)
-
-        // Update UI based on mode: if story mode, hide "Post" text and show "Story" text in top tabs.
-        if (isStoryMode) {
-            findViewById<TextView>(R.id.post_text).visibility = View.GONE
-            val storyTextView = findViewById<TextView>(R.id.story_text)
-            storyTextView.visibility = View.VISIBLE
-            // Optionally update text style and color:
-            storyTextView.text = "Story"
-            storyTextView.setTextColor(ContextCompat.getColor(this, android.R.color.black))
-            storyTextView.textSize = 18f
-        }
-
         // Find UI elements (IDs must match your XML)
         previewView = findViewById(R.id.viewFinder)
         captureButton = findViewById(R.id.capture_button)
         switchCameraButton = findViewById(R.id.switch_camera_button)
         closeButton = findViewById(R.id.close_button)
         galleryIcon = findViewById(R.id.gallery_icon)
+        postText = findViewById(R.id.post_text)
+        storyText = findViewById(R.id.story_text)
+
+        // Determine mode based on intent extra ("IS_STORY")
+        isStoryMode = intent.getBooleanExtra("IS_STORY", false)
+        updateModeUI()
+
+        setupSwipeGesture()
 
         // Set up click listeners
         captureButton.setOnClickListener { captureImage() }
@@ -242,7 +241,44 @@ class CameraActivity : AppCompatActivity() {
             }
         }
     }
+/////////////////////////////
+    private fun updateModeUI() {
+        if (isStoryMode) {
+            postText.visibility = View.GONE
+            storyText.visibility = View.VISIBLE
+        } else {
+            postText.visibility = View.VISIBLE
+            storyText.visibility = View.GONE
+        }
+    }
 
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupSwipeGesture() {
+        val gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onFling(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                velocityX: Float,
+                velocityY: Float
+            ): Boolean {
+                if (e1 != null && e2 != null) {
+                    val deltaX = e2.x - e1.x
+                    if (Math.abs(deltaX) > 100) {
+                        isStoryMode = !isStoryMode
+                        updateModeUI()
+                        return true
+                    }
+                }
+                return false
+            }
+        })
+
+        previewView.setOnTouchListener { _, event ->
+            gestureDetector.onTouchEvent(event)
+            true
+        }
+    }
+//////////////////////////
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()

@@ -39,8 +39,6 @@
             android:textStyle="" />
 
         <!-- Subtitle -->
-
-        <!-- Username -->
         <TextView
             android:id="@+id/subtitle"
             android:layout_width="wrap_content"
@@ -51,6 +49,7 @@
             android:fontFamily="sans-serif-medium"
             android:textSize="20sp" />
 
+        <!-- Email input - fixed inputType for email -->
         <EditText
             android:id="@+id/email_input"
             android:layout_width="match_parent"
@@ -58,7 +57,7 @@
             android:layout_marginBottom="10dp"
             android:background="@android:color/transparent"
             android:hint="@string/username"
-            android:inputType=""
+            android:inputType="textEmailAddress"
             android:padding="12dp"
             android:textColor="@color/dark_brown"
             android:textColorHint="@color/gray"
@@ -86,13 +85,17 @@
             android:layout_marginBottom="15dp"
             android:text="@string/forgot_password"
             android:textColor="@color/brown"
-            android:textSize="14sp"
-            />
+            android:textSize="14sp"/>
+
+        <!-- Progress Bar - Added to match Kotlin code -->
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:visibility="gone" />
 
         <!-- Login Button -->
-
-
-        <!-- Divider Line with "or continue with" -->
         <Button
             android:id="@+id/login_button"
             android:layout_width="match_parent"
@@ -132,7 +135,6 @@
         </LinearLayout>
 
         <!-- Social Buttons (Centered) -->
-        <!-- Social Buttons (Centered) -->
         <LinearLayout
             android:id="@+id/social_buttons"
             android:layout_width="match_parent"
@@ -142,12 +144,10 @@
             android:orientation="horizontal"
             android:gravity="center">
 
-
             <FrameLayout
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:layout_gravity="center_vertical">
-
 
                 <View
                     android:layout_width="match_parent"
@@ -162,12 +162,10 @@
                     android:src="@drawable/google_icon" />
             </FrameLayout>
 
-            <!--                add space between google icon and apple icon-->
             <View
                 android:layout_width="0dp"
                 android:layout_height="1dp"
                 android:layout_weight="1"/>
-
 
             <ImageView
                 android:id="@+id/apple_login"
@@ -177,13 +175,11 @@
                 android:padding="8dp"
                 android:src="@drawable/apple_icon"/>
 
-            <!--add space between facebook icon and apple icon-->
             <View
                 android:layout_width="0dp"
                 android:layout_height="1dp"
                 android:layout_weight="1"/>
 
-            <!-- Facebook Icon at the End of Parent -->
             <FrameLayout
                 android:layout_width="65dp"
                 android:layout_height="65dp"
@@ -200,11 +196,9 @@
             </FrameLayout>
         </LinearLayout>
 
-
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            >
+            android:layout_height="match_parent">
             <TextView
                 android:id="@+id/register_text"
                 android:layout_width="wrap_content"
@@ -213,8 +207,7 @@
                 android:layout_marginStart="60dp"
                 android:text="@string/don_t_have_an_account"
                 android:textColor="@color/dark_brown"
-                android:textSize="16sp"
-                />
+                android:textSize="16sp"/>
             <TextView
                 android:id="@+id/register"
                 android:layout_width="wrap_content"
@@ -226,8 +219,6 @@
                 android:textColor="@color/dark_brown"
                 android:textSize="17sp"
                 android:textStyle="bold" />
-
         </RelativeLayout>
-
     </LinearLayout>
 </LinearLayout>

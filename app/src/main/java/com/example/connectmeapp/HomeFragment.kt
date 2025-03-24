@@ -7,18 +7,33 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
+import kotlinx.coroutines.*
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class HomeFragment : Fragment() {
+    private lateinit var storiesRecyclerView: RecyclerView
+    private lateinit var storyAdapter: StoryAdapter
+    private val storyList = mutableListOf<StoryModel>()
+    private var followingList: List<String> = emptyList()
+    private var storyListener: ChildEventListener? = null
+
 
     private lateinit var postsRecyclerView: RecyclerView
     private lateinit var postsAdapter: PostAdapter
     private val postsList = mutableListOf<PostModel>()
+
+    private lateinit var storiesProgressBar: ProgressBar
+    private lateinit var postsProgressBar: ProgressBar
+
+    private val coroutineScope = CoroutineScope(Dispatchers.Main + Job())
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -27,62 +42,243 @@ class HomeFragment : Fragment() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_home, container, false)
 
-        // Handle notification icon click to open NotificationActivity
         val notificationIcon = view.findViewById<ImageView>(R.id.notification_icon)
         notificationIcon.setOnClickListener {
             val intent = Intent(requireContext(), NotificationActivity::class.java)
             startActivity(intent)
         }
 
-        // Embed StoryFragment in the story container
-        val storyFragment = StoryFragment()
-        childFragmentManager.beginTransaction()
-            .replace(R.id.story_container, storyFragment)
-            .commit()
+        // Initialize progress bars
+        storiesProgressBar = view.findViewById(R.id.stories_progress_bar)
+        postsProgressBar = view.findViewById(R.id.posts_progress_bar)
 
-        // Set up posts RecyclerView
+        // Set up stories recycler view
+        storiesRecyclerView = view.findViewById(R.id.stories_recycler_view)
+        storiesRecyclerView.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+        storyAdapter = StoryAdapter(
+            storyList,
+            currentUserId,
+            onStoryClick = { story ->
+                val intent = Intent(requireContext(), StoryViewerActivity::class.java)
+                intent.putExtra("storyUserId", story.userId)
+                startActivity(intent)
+            },
+            onAddStoryClick = {
+                val intent = Intent(requireContext(), CameraActivity::class.java)
+                intent.putExtra("IS_STORY", true)
+                startActivity(intent)
+            }
+        )
+        storiesRecyclerView.adapter = storyAdapter
+
+        // 🔥 ADD THE LISTENER HERE 🔥
+        listenForStoryUpdates()
+
+        // Set up posts recycler view
         postsRecyclerView = view.findViewById(R.id.posts_recycler_view)
         postsRecyclerView.layoutManager = LinearLayoutManager(context)
         postsAdapter = PostAdapter(postsList)
         postsRecyclerView.adapter = postsAdapter
 
-        // Load posts from Firebase
-        loadPosts()
+        // Show progress bars
+        storiesProgressBar.visibility = View.VISIBLE
+        postsProgressBar.visibility = View.VISIBLE
+
+        // Load data in parallel using coroutines
+        loadDataInParallel()
 
         return view
     }
 
 
-    private fun loadPosts() {
+    private fun loadDataInParallel() {
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val usersRef = FirebaseDatabase.getInstance().getReference("users/$currentUserId/following")
 
-        usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val followedUsers = snapshot.children.mapNotNull { it.key }
-                val postsRef = FirebaseDatabase.getInstance().getReference("posts")
+        coroutineScope.launch {
+            try {
+                // Load following list first
+                followingList = withContext(Dispatchers.IO) {
+                    getFollowingUsers(currentUserId)
+                }
 
-                postsRef.addValueEventListener(object : ValueEventListener {
-                    override fun onDataChange(snapshot: DataSnapshot) {
-                        postsList.clear()
-                        for (child in snapshot.children) {
-                            val post = child.getValue(PostModel::class.java)
-                            if (post != null && followedUsers.contains(post.userId)) {
-                                postsList.add(post)
-                            }
-                        }
-                        postsList.sortByDescending { it.timestamp }
-                        postsAdapter.notifyDataSetChanged()
-                    }
+                // Then load stories and posts in parallel
+                val deferredStories = async { loadStoriesOptimized(followingList, currentUserId) }
+                val deferredPosts = async { loadPostsOptimized(followingList, currentUserId) }
 
-                    override fun onCancelled(error: DatabaseError) {
-                        Toast.makeText(context, "Error loading posts: ${error.message}", Toast.LENGTH_SHORT).show()
-                    }
-                })
+                // Wait for both to complete
+                val storiesResult = deferredStories.await()
+                val postsResult = deferredPosts.await()
+
+                // Update UI with results
+                updateStoriesUI(storiesResult)
+                updatePostsUI(postsResult)
+
+                // 🔥 Start listening for real-time updates after fetching following list
+                listenForStoryUpdates()
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Error loading data: ${e.message}", Toast.LENGTH_SHORT).show()
+                    storiesProgressBar.visibility = View.GONE
+                    postsProgressBar.visibility = View.GONE
+                }
             }
+        }
 
-            override fun onCancelled(error: DatabaseError) {}
-        })
     }
 
+    private suspend fun getFollowingUsers(userId: String): List<String> = suspendCancellableCoroutine { cont ->
+        val followingRef = FirebaseDatabase.getInstance().getReference("following/$userId")
+
+        val listener = followingRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val followedUsers = snapshot.children.mapNotNull { it.key }.toMutableList()
+                // Add current user to show their own posts
+                followedUsers.add(userId)
+                cont.resume(followedUsers)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                if (cont.isActive) cont.resumeWithException(Exception(error.message))
+            }
+        })
+
+        cont.invokeOnCancellation {
+            followingRef.removeEventListener(listener as ValueEventListener)
+        }
+    }
+
+    private suspend fun loadStoriesOptimized(followedUsers: List<String>, currentUserId: String): List<StoryModel> = suspendCancellableCoroutine { cont ->
+        // Add current user to show their own stories
+        val usersToLoad = followedUsers.toMutableSet()
+        usersToLoad.add(currentUserId)
+
+        val storiesRef = FirebaseDatabase.getInstance().getReference("stories")
+        // Limit to last 7 days of stories
+        val oneWeekAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000)
+
+        // Query optimization: filter by timestamp and limit results
+        val query = storiesRef.orderByChild("timestamp").startAt(oneWeekAgo.toDouble()).limitToLast(50)
+
+        val listener = query.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val stories = mutableListOf<StoryModel>()
+                for (storySnapshot in snapshot.children) {
+                    val story = storySnapshot.getValue(StoryModel::class.java)
+                    if (story != null && story.isValid() && usersToLoad.contains(story.userId)) {
+                        stories.add(story)
+                    }
+                }
+                cont.resume(stories)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                if (cont.isActive) cont.resumeWithException(Exception(error.message))
+            }
+        })
+
+        cont.invokeOnCancellation {
+            query.removeEventListener(listener as ValueEventListener)
+        }
+    }
+
+    private suspend fun loadPostsOptimized(followedUsers: List<String>, currentUserId: String): List<PostModel> = suspendCancellableCoroutine { cont ->
+        val postsRef = FirebaseDatabase.getInstance().getReference("posts")
+
+        // Query optimization: Order by timestamp and limit to most recent posts
+        val query = postsRef.orderByChild("timestamp").limitToLast(20)
+
+        val listener = query.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val posts = mutableListOf<PostModel>()
+                for (child in snapshot.children) {
+                    val post = child.getValue(PostModel::class.java)
+                    if (post != null && (followedUsers.contains(post.userId) || post.userId == currentUserId)) {
+                        posts.add(post)
+                    }
+                }
+                posts.sortByDescending { it.timestamp }
+                cont.resume(posts)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                if (cont.isActive) cont.resumeWithException(Exception(error.message))
+            }
+        })
+
+        cont.invokeOnCancellation {
+            query.removeEventListener(listener as ValueEventListener)
+        }
+    }
+
+    private fun updateStoriesUI(stories: List<StoryModel>) {
+        storyList.clear()
+        storyList.addAll(stories)
+        storyAdapter.notifyDataSetChanged()
+        storiesProgressBar.visibility = View.GONE
+    }
+
+    private fun updatePostsUI(posts: List<PostModel>) {
+        postsList.clear()
+        postsList.addAll(posts)
+        postsAdapter.notifyDataSetChanged()
+        postsProgressBar.visibility = View.GONE
+    }
+    private fun listenForStoryUpdates() {
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val storiesRef = FirebaseDatabase.getInstance().getReference("stories")
+
+        // Remove existing listener before adding a new one
+        storyListener?.let { storiesRef.removeEventListener(it) }
+
+        val storyIdsSet = storyList.map { it.id }.toHashSet()
+
+        storyListener = object : ChildEventListener {
+            override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+                val story = snapshot.getValue(StoryModel::class.java)
+                if (story != null && (story.userId == currentUserId || followingList.contains(story.userId))) {
+                    if (!storyIdsSet.contains(story.id)) { // Avoid duplicates
+                        storyList.add(story)
+                        storyIdsSet.add(story.id)
+                        storyAdapter.notifyDataSetChanged()
+                    }
+                }
+            }
+
+            override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
+                val updatedStory = snapshot.getValue(StoryModel::class.java)
+                if (updatedStory != null) {
+                    val index = storyList.indexOfFirst { it.id == updatedStory.id }
+                    if (index != -1) {
+                        storyList[index] = updatedStory
+                        storyAdapter.notifyItemChanged(index)
+                    }
+                }
+            }
+
+            override fun onChildRemoved(snapshot: DataSnapshot) {
+                val removedStory = snapshot.getValue(StoryModel::class.java)
+                if (removedStory != null) {
+                    storyList.removeAll { it.id == removedStory.id }
+                    storyAdapter.notifyDataSetChanged()
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("Firebase", "Error: ${error.message}")
+            }
+
+            override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {}
+        }
+
+        storiesRef.addChildEventListener(storyListener!!)
+    }
+
+
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Cancel all coroutines when the fragment is destroyed
+        coroutineScope.cancel()
+    }
 }
