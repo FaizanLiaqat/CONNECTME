@@ -39,12 +39,6 @@ android {
     }
 }
 
-configurations {
-    all {
-        // Exclude the duplicate crashlytics buildtools
-        exclude(group = "com.google.firebase", module = "firebase-crashlytics-buildtools")
-    }
-}
 dependencies {
     // Add Firebase BOM
     implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
@@ -62,15 +56,14 @@ dependencies {
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
 
-    // Firebase dependencies (without versions when using BOM)
+    // Firebase dependencies (use BOM versions)
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation(libs.firebase.auth)
-    implementation(libs.firebase.database)
 
-    // Comment out the crashlytics buildtools as it's likely not needed directly
-    // implementation(libs.firebase.crashlytics.buildtools)
+    // REMOVE THESE TWO LINES - they're causing the conflict
+    // implementation(libs.firebase.auth)
+    // implementation(libs.firebase.database)
 
     // Rest of your dependencies
     testImplementation(libs.junit)
