@@ -34,7 +34,7 @@ class EditPostActivity : AppCompatActivity() {
         intent.getStringExtra("IMAGE_URI")?.let { uriString ->
             imageUri = Uri.parse(uriString)
             imageUri?.let { uri ->
-                grantUriPermission(uri)  // ✅ Grant permission
+                grantUriPermission(uri)  //  Grant permission
                 postImageView.setImageURI(uri)
             }
         }
@@ -70,7 +70,7 @@ class EditPostActivity : AppCompatActivity() {
 
             // Retrieve user info (username, profile image) from Firebase
             userRef.get().addOnSuccessListener { snapshot ->
-                val username = snapshot.child("username").getValue(String::class.java) ?: currentUser.displayName ?: "User"
+                val username = snapshot.child("username").getValue(String::class.java) ?: currentUser.displayName ?: "Use   r"
                 val profileImageUrl = snapshot.child("profileImageUrl").getValue(String::class.java) ?: ""
 
                 val post = PostModel(
@@ -118,7 +118,7 @@ class EditPostActivity : AppCompatActivity() {
                 val bitmap = BitmapFactory.decodeStream(inputStream) ?: return ""
 
                 val baos = ByteArrayOutputStream()
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)  // 🔥 Keep original quality (100%)
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos)  //  Keep original quality (100%)
 
                 Base64.encodeToString(baos.toByteArray(), Base64.DEFAULT)
             } ?: ""

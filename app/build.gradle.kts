@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.google.services)
 }
 val cameraxVersion = "1.2.1"
 android {
@@ -66,6 +66,8 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.database)
 
     // Comment out the crashlytics buildtools as it's likely not needed directly
     // implementation(libs.firebase.crashlytics.buildtools)
