@@ -3,18 +3,26 @@ package com.example.connectmeapp
 import android.content.ContentUris
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Base64
 import android.util.Log
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 
 class AddPostActivity : AppCompatActivity() {
@@ -36,11 +44,13 @@ class AddPostActivity : AppCompatActivity() {
         // In AddPostActivity.kt
         // Modify the Next button click listener:
         findViewById<TextView>(R.id.next_button).setOnClickListener {
-            // Navigate to edit post activity with selected image
+            val selectedImage = galleryAdapter.getSelectedImageBase64()
+            if (selectedImage.isEmpty()) {
+                Toast.makeText(this, "Select an image first", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
             val intent = Intent(this, EditPostActivity::class.java)
-            // Get the URI of the currently selected image
-            val selectedImageUri = galleryAdapter.getSelectedImageUri()
-            intent.putExtra("IMAGE_URI", selectedImageUri.toString())
+            intent.putExtra("IMAGE_BASE64", selectedImage)
             startActivity(intent)
         }
 
@@ -68,61 +78,59 @@ class AddPostActivity : AppCompatActivity() {
         val recyclerView = findViewById<RecyclerView>(R.id.gallery_recycler_view)
         recyclerView.layoutManager = GridLayoutManager(this, 4)
 
-        // Get images from the device
-        val galleryImages = getGalleryImages()
-
-        // Set initial selected image if available
-        if (galleryImages.isNotEmpty()) {
-            updateSelectedImage(galleryImages[0])
-        }
-
-        // Create and set adapter
-        galleryAdapter = GalleryAdapter(galleryImages) { imageUri ->
-            updateSelectedImage(imageUri)
+        // Initialize with empty list
+        galleryAdapter = GalleryAdapter(mutableListOf()) { base64 ->
+            updateSelectedImage(base64)
         }
         recyclerView.adapter = galleryAdapter
+
+        // Fetch images from Firebase
+        fetchUserImagesFromFirebase()
     }
+    private fun fetchUserImagesFromFirebase() {
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val images = mutableListOf<String>()
 
-    private fun updateSelectedImage(imageUri: Uri) {
-        selectedImageView.setImageURI(imageUri)
-    }
-
-    private fun getGalleryImages(): List<Uri> {
-        val images = mutableListOf<Uri>()
-
-        // Query for all images with broader criteria
-        val projection = arrayOf(MediaStore.Images.Media._ID)
-        val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC" // Sort by newest first
-
-        // Query both external and internal storage
-        val externalContentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-
-        try {
-            contentResolver.query(
-                externalContentUri,
-                projection,
-                null, // No selection filter
-                null, // No selection arguments
-                sortOrder
-            )?.use { cursor ->
-                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-
-                while (cursor.moveToNext()) {
-                    val id = cursor.getLong(idColumn)
-                    val contentUri = ContentUris.withAppendedId(
-                        externalContentUri,
-                        id
-                    )
-                    images.add(contentUri)
+        // Fetch posts
+        FirebaseDatabase.getInstance().getReference("posts")
+            .orderByChild("userId").equalTo(currentUserId)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    snapshot.children.mapNotNullTo(images) {
+                        it.getValue(PostModel::class.java)?.imageUrl
+                    }
+                    // Realtime stories listener
+                    FirebaseDatabase.getInstance().getReference("stories")
+                        .orderByChild("userId").equalTo(currentUserId)
+                        .addValueEventListener(object : ValueEventListener {
+                            override fun onDataChange(storiesSnapshot: DataSnapshot) {
+                                storiesSnapshot.children.mapNotNullTo(images) {
+                                    it.getValue(StoryModel::class.java)?.imageBase64
+                                }
+                                galleryAdapter.updateImages(images.distinct())
+                                if (images.isNotEmpty()) updateSelectedImage(images[0])
+                            }
+                            override fun onCancelled(error: DatabaseError) {
+                                Log.e("AddPostActivity", "Stories fetch failed", error.toException())
+                            }
+                        })
                 }
-            }
-        } catch (e: Exception) {
-            // Log error to help debug
-            Log.e("AddPostActivity", "Error retrieving gallery images: ${e.message}")
-        }
-
-        return images
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e("AddPostActivity", "Posts fetch failed", error.toException())
+                }
+            })
     }
+    private fun updateSelectedImage(base64Image: String) {
+        try {
+            val imageBytes = Base64.decode(base64Image, Base64.DEFAULT)
+            val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+            selectedImageView.setImageBitmap(bitmap)
+        } catch (e: Exception) {
+            selectedImageView.setImageResource(R.drawable.profile_placeholder)
+        }
+    }
+
+
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -130,47 +138,12 @@ class AddPostActivity : AppCompatActivity() {
         if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null) {
             val selectedImage = data.data
             selectedImage?.let {
-                updateSelectedImage(it)
+                updateSelectedImage(it.toString())
             }
         }
     }
 
-    private fun checkPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // For Android 13+
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    android.Manifest.permission.READ_MEDIA_IMAGES
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(android.Manifest.permission.READ_MEDIA_IMAGES),
-                    PERMISSION_REQUEST_CODE
-                )
-            } else {
-                setupGalleryRecyclerView()
-            }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // For Android 6-12
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    android.Manifest.permission.READ_EXTERNAL_STORAGE
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE),
-                    PERMISSION_REQUEST_CODE
-                )
-            } else {
-                setupGalleryRecyclerView()
-            }
-        } else {
-            // For older Android versions
-            setupGalleryRecyclerView()
-        }
-    }
+
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -193,7 +166,7 @@ class AddPostActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-
+        fetchUserImagesFromFirebase()
         // Refresh gallery images when returning to this activity
         setupGalleryRecyclerView()
     }

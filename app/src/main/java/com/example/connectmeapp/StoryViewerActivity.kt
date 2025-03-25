@@ -1,9 +1,12 @@
 package com.example.connectmeapp
 
+import android.app.Activity
+import android.content.Intent
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.util.Base64
+import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.ProgressBar
@@ -32,10 +35,6 @@ class StoryViewerActivity : AppCompatActivity() {
 
     private var storyId: String? = null
     private var userId: String? = null
-    private var timer: CountDownTimer? = null
-
-    private var userStories = mutableListOf<StoryModel>()
-    private var currentStoryIndex = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,27 +66,16 @@ class StoryViewerActivity : AppCompatActivity() {
     private fun loadUserStories() {
         progressBar.visibility = View.VISIBLE
 
-        val userStoryRef = storiesReference.child(userId!!)
-        userStoryRef.addListenerForSingleValueEvent(object : ValueEventListener {
+        // Fetch the specific story directly using the storyId
+        val storyRef = storiesReference.child(storyId!!)
+        storyRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                userStories.clear()
+                val story = snapshot.getValue(StoryModel::class.java)
 
-                for (storySnapshot in snapshot.children) {
-                    val story = storySnapshot.getValue(StoryModel::class.java)
-                    if (story != null && story.isValid()) {
-                        userStories.add(story)
-                    }
-                }
-
-                userStories.sortByDescending { it.timestamp }
-
-                if (userStories.isNotEmpty()) {
-                    currentStoryIndex = userStories.indexOfFirst { it.id == storyId }
-                    if (currentStoryIndex == -1) currentStoryIndex = 0
-
-                    displayStory(userStories[currentStoryIndex])
+                if (story != null && story.isValid()) {
+                    displayStory(story)
                 } else {
-                    Toast.makeText(this@StoryViewerActivity, "No stories available", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@StoryViewerActivity, "Story not found or expired", Toast.LENGTH_SHORT).show()
                     finish()
                 }
             }
@@ -99,6 +87,7 @@ class StoryViewerActivity : AppCompatActivity() {
             }
         })
     }
+
 
     private fun displayStory(story: StoryModel) {
         usernameText.text = story.username
@@ -117,34 +106,27 @@ class StoryViewerActivity : AppCompatActivity() {
 
         markStoryAsViewed(story.id)
         progressBar.visibility = View.GONE
-        startStoryTimer()
+
     }
 
     private fun markStoryAsViewed(storyId: String) {
         val currentUserId = auth.currentUser?.uid ?: return
-        val viewedByRef = storiesReference.child(userId!!).child(storyId).child("viewedBy").child(currentUserId)
-        viewedByRef.setValue(true)
+        val viewedByRef = storiesReference.child(storyId).child("viewedBy").child(currentUserId)
+
+        viewedByRef.setValue(true).addOnSuccessListener {
+            Log.d("StoryViewerActivity", "Marked story as viewed for user $currentUserId")
+            setResult(Activity.RESULT_OK, Intent().apply {
+                putExtra("STORY_ID", storyId)
+            })
+        }.addOnFailureListener { e ->
+            Log.e("StoryViewerActivity", "Failed to mark story as viewed: ${e.message}")
+        }
     }
 
-    private fun startStoryTimer() {
-        timer?.cancel()
 
-        timer = object : CountDownTimer(5000, 5000) {
-            override fun onTick(millisUntilFinished: Long) {}
-
-            override fun onFinish() {
-                if (currentStoryIndex < userStories.size - 1) {
-                    currentStoryIndex++
-                    displayStory(userStories[currentStoryIndex])
-                } else {
-                    finish()
-                }
-            }
-        }.start()
-    }
 
     override fun onDestroy() {
         super.onDestroy()
-        timer?.cancel()
+
     }
 }

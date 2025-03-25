@@ -8,5 +8,5 @@ data class PostModel(
     val caption: String = "",
     val imageUrl: String = "",
     val timestamp: Long = 0,
-    val likes: Map<String, Boolean> = hashMapOf()
+    var likes: Map<String, Boolean> = hashMapOf() // Changed to var
 )
