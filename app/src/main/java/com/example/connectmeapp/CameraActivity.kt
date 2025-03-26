@@ -226,7 +226,7 @@ class CameraActivity : AppCompatActivity() {
 
     private fun bitmapToBase64(bitmap: Bitmap): String {
         val outputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputStream)
         return Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT)
     }
 

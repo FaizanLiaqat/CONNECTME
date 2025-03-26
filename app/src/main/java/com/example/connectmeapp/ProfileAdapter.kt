@@ -23,10 +23,12 @@ class ProfileAdapter(private val posts: List<String>) : RecyclerView.Adapter<Pro
         val base64Image = posts[position]
         if (base64Image.isNotEmpty()) {
             try {
+                // Decode the Base64 image string to a Bitmap
                 val imageBytes = Base64.decode(base64Image, Base64.DEFAULT)
                 val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
                 holder.postImage.setImageBitmap(bitmap)
             } catch (e: Exception) {
+                // If decoding fails, show a placeholder
                 holder.postImage.setImageResource(R.drawable.profile_placeholder)
             }
         } else {
