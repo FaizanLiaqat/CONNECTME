@@ -324,15 +324,17 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun bitmapToBase64(bitmap: Bitmap): String {
+
         try {
             val outputStream = ByteArrayOutputStream()
             // Reduce compression if image is too large
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputStream)
             return Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT)
         } catch (e: Exception) {
             Log.e("CameraActivity", "Base64 encoding failed", e)
             throw e
         }
+
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
