@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="12dp">
 
-    <!-- 🟠 Profile Picture with Circular Border -->
+    <!-- Profile Picture with Circular Border -->
     <FrameLayout
         android:id="@+id/profile_container"
         android:layout_width="50dp"
@@ -14,25 +15,24 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <!-- 🟢 Outer Circle (Story Border) -->
+        <!-- Outer Circle (Story Border) -->
         <ImageView
             android:id="@+id/profile_border"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:scaleType="fitXY"
-            android:src="@drawable/story_border"/> <!-- ✅ Reusing story border -->
+            android:src="@drawable/story_border"/>
 
-        <!-- 🟠 Profile Picture Inside the Border -->
+        <!-- Profile Picture -->
         <de.hdodenhof.circleimageview.CircleImageView
             android:id="@+id/user_profile_image"
             android:layout_width="46dp"
             android:layout_height="46dp"
             android:layout_gravity="center"
-            android:scaleType="centerCrop"
-            />
+            android:scaleType="centerCrop" />
     </FrameLayout>
 
-    <!-- 🟢 Username -->
+    <!-- Username -->
     <TextView
         android:id="@+id/username"
         android:layout_width="wrap_content"
@@ -45,7 +45,7 @@
         app:layout_constraintBottom_toBottomOf="@id/profile_container"
         android:layout_marginStart="12dp"/>
 
-    <!-- 🎥 Video Camera Icon -->
+    <!-- Video Camera Icon -->
     <ImageView
         android:id="@+id/video_camera"
         android:layout_width="29dp"
@@ -55,5 +55,4 @@
         app:layout_constraintTop_toTopOf="@id/profile_container"
         app:layout_constraintBottom_toBottomOf="@id/profile_container"
         android:layout_marginEnd="12dp"/>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

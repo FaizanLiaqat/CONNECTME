@@ -6,8 +6,10 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-class ChatAdapter(private val messages: List<ChatModel>, private val currentUserId: String) :
-    RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+class ChatAdapter(
+    private val messages: List<ChatModel>,
+    private val currentUserId: String
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val MESSAGE_SENT = 1
     private val MESSAGE_RECEIVED = 2
@@ -48,3 +50,4 @@ class ChatAdapter(private val messages: List<ChatModel>, private val currentUser
         val timestamp: TextView = itemView.findViewById(R.id.text_timestamp)
     }
 }
+
