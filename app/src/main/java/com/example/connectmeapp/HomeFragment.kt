@@ -1,5 +1,6 @@
 package com.example.connectmeapp
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -19,6 +20,9 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class HomeFragment : Fragment() {
+    companion object {
+        private const val VIEW_STORY_REQUEST_CODE = 1001
+    }
     private lateinit var storiesRecyclerView: RecyclerView
     private lateinit var storyAdapter: StoryAdapter
     private val storyList = mutableListOf<StoryModel>()
@@ -29,7 +33,7 @@ class HomeFragment : Fragment() {
     private lateinit var postsRecyclerView: RecyclerView
     private lateinit var postsAdapter: PostAdapter
     private val postsList = mutableListOf<PostModel>()
-
+    private var postListener: ValueEventListener? = null
     private lateinit var storiesProgressBar: ProgressBar
     private lateinit var postsProgressBar: ProgressBar
 
@@ -61,8 +65,9 @@ class HomeFragment : Fragment() {
             currentUserId,
             onStoryClick = { story ->
                 val intent = Intent(requireContext(), StoryViewerActivity::class.java)
-                intent.putExtra("storyUserId", story.userId)
-                startActivity(intent)
+                intent.putExtra("STORY_ID", story.id)
+                intent.putExtra("USER_ID", story.userId)
+                startActivityForResult(intent, VIEW_STORY_REQUEST_CODE)
             },
             onAddStoryClick = {
                 val intent = Intent(requireContext(), CameraActivity::class.java)
@@ -116,6 +121,7 @@ class HomeFragment : Fragment() {
 
                 // 🔥 Start listening for real-time updates after fetching following list
                 listenForStoryUpdates()
+                listenForPostUpdates()
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(context, "Error loading data: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -219,6 +225,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun updatePostsUI(posts: List<PostModel>) {
+        Log.d("DEBUG", "Updating UI with ${posts.size} posts")
         postsList.clear()
         postsList.addAll(posts)
         postsAdapter.notifyDataSetChanged()
@@ -275,6 +282,64 @@ class HomeFragment : Fragment() {
     }
 
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == VIEW_STORY_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+            val storyId = data?.getStringExtra("STORY_ID")
+            val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+            storyId?.let { id ->
+                val index = storyList.indexOfFirst { it.id == id }
+                if (index != -1) {
+                    // Update the viewedBy locally
+                    val story = storyList[index]
+                    val updatedViewedBy = story.viewedBy.toMutableMap().apply {
+                        put(currentUserId, true)
+                    }
+                    val updatedStory = story.copy(viewedBy = updatedViewedBy)
+                    storyList[index] = updatedStory
+                    // Notify adapter, considering the first item is the "add story" button
+                    storyAdapter.notifyItemChanged(index + 1)
+                }
+            }
+        }
+    }
+
+
+    private fun listenForPostUpdates() {
+        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val postsRef = FirebaseDatabase.getInstance().getReference("posts")
+
+        postListener?.let { postsRef.removeEventListener(it) }
+
+        val postIdsSet = postsList.map { it.postId }.toHashSet()
+
+        postListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val newPosts = mutableListOf<PostModel>()
+                for (child in snapshot.children) {
+                    val post = child.getValue(PostModel::class.java)
+                    if (post != null && (followingList.contains(post.userId) || post.userId == currentUserId)) {
+                        if (!postIdsSet.contains(post.postId)) {
+                            newPosts.add(post)
+                            postIdsSet.add(post.postId)
+                        }
+                    }
+                }
+                if (newPosts.isNotEmpty()) {
+                    // Preserve like state for existing posts
+                    postsList.addAll(0, newPosts)
+                    postsAdapter.notifyItemRangeInserted(0, newPosts.size)
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("Firebase", "Post Listener Error: ${error.message}")
+            }
+        }
+
+        postsRef.addValueEventListener(postListener!!)
+    }
 
     override fun onDestroy() {
         super.onDestroy()

@@ -52,6 +52,7 @@
             android:id="@+id/post_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
             android:text="Post"
             android:textSize="18sp"
             android:textStyle="bold"
@@ -64,7 +65,9 @@
             android:layout_height="wrap_content"
             android:text="Story"
             android:textSize="16sp"
-            android:textColor="@color/gray" />
+            android:textColor="@color/black"
+            android:textStyle="bold"
+            />
     </LinearLayout>
 
     <!-- ViewPager for Post/Story content -->

@@ -2,6 +2,7 @@ package com.example.connectmeapp
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -49,30 +50,41 @@ class StoryFragment : Fragment() {
         usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val followedUsers = snapshot.children.mapNotNull { it.key }.toMutableList()
-                followedUsers.add(currentUserId) // Include current user’s story
+                followedUsers.add(currentUserId) // Include current user
 
-                storiesReference.addListenerForSingleValueEvent(object : ValueEventListener {
+                storiesReference.orderByChild("timestamp").addListenerForSingleValueEvent(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
-                        stories.clear()
                         val currentTime = System.currentTimeMillis()
-                        for (storySnapshot in snapshot.children) {
+                        val tempStories = snapshot.children.mapNotNull { storySnapshot ->
                             val story = storySnapshot.getValue(StoryModel::class.java)
                             if (story != null && followedUsers.contains(story.userId) && currentTime - story.timestamp <= 24 * 60 * 60 * 1000) {
-                                stories.add(story)
-                            }
+                                story
+                            } else null
                         }
-                        val userStories = stories.groupBy { it.userId }
-                            .map { (_, stories) -> stories.maxByOrNull { it.timestamp } ?: stories.first() }
+
+                        val userStories = tempStories
+                            .groupBy { it.userId }
+                            .mapNotNull { (_, stories) -> stories.maxByOrNull { it.timestamp } }
                             .sortedByDescending { it.timestamp }
 
-                        storyAdapter.updateStories(userStories)
+                        requireActivity().runOnUiThread {
+                            storyAdapter.updateStories(userStories)
+                        }
                     }
-                    override fun onCancelled(error: DatabaseError) {}
+
+                    override fun onCancelled(error: DatabaseError) {
+                        Log.e("StoryFragment", "Error loading stories: ${error.message}")
+                    }
                 })
             }
-            override fun onCancelled(error: DatabaseError) {}
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("StoryFragment", "Error fetching followed users: ${error.message}")
+            }
         })
     }
+
+
 
     private fun openStoryViewer(story: StoryModel) {
         val currentUserId = auth.currentUser?.uid ?: return

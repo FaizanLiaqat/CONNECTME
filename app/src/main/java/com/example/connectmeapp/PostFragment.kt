@@ -50,7 +50,7 @@ class PostFragment : Fragment() {
                         postsList.add(post)
                     }
                 }
-                // Optionally sort posts (e.g., newest first)
+                // sort posts (e.g., newest first)
                 postsList.sortByDescending { it.timestamp }
                 postAdapter.notifyDataSetChanged()
             }

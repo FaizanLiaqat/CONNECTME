@@ -104,6 +104,9 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/gallery_recycler_view"
         android:layout_width="match_parent"
-        android:layout_height="120dp"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:listitem="@layout/item_gallery" />
 </androidx.constraintlayout.widget.ConstraintLayout>

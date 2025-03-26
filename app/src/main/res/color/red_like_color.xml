@@ -1,0 +1,12 @@
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Pressed state (when button is being touched) -->
+    <item android:color="#FF5252" android:state_pressed="true"/>
+
+    <!-- Checked/Liked state -->
+    <item android:color="#FF1744" android:state_checked="true"/>
+
+    <!-- Selected state -->
+    <item android:color="#FF1744" android:state_selected="true"/>
+
+
+</selector>
