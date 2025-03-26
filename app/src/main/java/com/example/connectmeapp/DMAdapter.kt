@@ -9,6 +9,8 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
+
+
 class DMAdapter(
     private var users: List<UserModel>,
     private val onItemClick: (UserModel) -> Unit
@@ -29,6 +31,7 @@ class DMAdapter(
         loadProfileImage(user, holder.profileImage)
         holder.username.text = user.username
         holder.profileImage.clipToOutline = true
+
         holder.itemView.setOnClickListener { onItemClick(user) }
     }
 
@@ -39,6 +42,10 @@ class DMAdapter(
         notifyDataSetChanged()
     }
 
+    /**
+     * Load the profile image by decoding the Base64 string stored in profileImageUrl.
+     * If the string is empty or decoding fails, a placeholder is used.
+     */
     private fun loadProfileImage(user: UserModel, imageView: ImageView) {
         if (user.profileImageUrl.isEmpty()) {
             imageView.setImageResource(R.drawable.profile_placeholder)
@@ -53,4 +60,5 @@ class DMAdapter(
         }
     }
 }
+
 

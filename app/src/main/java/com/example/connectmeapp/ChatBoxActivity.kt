@@ -2,14 +2,18 @@ package com.example.connectmeapp
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.format.DateFormat
+import android.util.Base64
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
+import de.hdodenhof.circleimageview.CircleImageView
 
 class ChatBoxActivity : AppCompatActivity() {
 
@@ -19,8 +23,11 @@ class ChatBoxActivity : AppCompatActivity() {
     private lateinit var sendIcon: ImageView
 
     private val messages = mutableListOf<ChatModel>()
-    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: "123"  // Use real UID from FirebaseAuth
-    private val otherUserId = intent.getStringExtra("otherUserId") ?: "456" // Pass this via intent from DM list/profile
+
+    private lateinit var currentUserId: String
+    private lateinit var otherUserId: String
+    private lateinit var otherUsername: String
+    private lateinit var otherProfileImage: String
 
     private lateinit var chatRef: DatabaseReference
     private lateinit var conversationId: String
@@ -29,30 +36,49 @@ class ChatBoxActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat_box)
 
-        // Initialize UI elements
-        chatRecyclerView = findViewById(R.id.chat_recycler_view)
-        messageInput = findViewById(R.id.message_input)
-        sendIcon = findViewById(R.id.send_icon)
+        // Retrieve extras from the Intent (passed from DM item click)
+        otherUserId = intent.getStringExtra("otherUserId") ?: ""
+        otherUsername = intent.getStringExtra("username") ?: "Unknown"
+        otherProfileImage = intent.getStringExtra("profileImage") ?: ""
 
-        // Initialize call buttons
-        findViewById<ImageView>(R.id.phone_icon).setOnClickListener {
-            // Launch PhoneCallActivity
-            val username = intent.getStringExtra("username") ?: "Unknown"
-            val profileImage = intent.getIntExtra("profileImage", R.drawable.profile_placeholder)
-            val intent = Intent(this, PhoneCallActivity::class.java).apply {
-                putExtra("username", username)
-                putExtra("profileImage", profileImage)
+        currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
+        // Set the chat username at the top of the activity
+        findViewById<TextView>(R.id.chat_username).text = otherUsername
+
+        // Load other person's profile image into the chat header
+        val chatProfileImage = findViewById<CircleImageView>(R.id.chat_profile_image)
+        if(otherProfileImage.isNotEmpty()){
+            try {
+                val imageBytes = Base64.decode(otherProfileImage, Base64.DEFAULT)
+                val bitmap = android.graphics.BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                chatProfileImage.setImageBitmap(bitmap)
+            } catch (e: Exception) {
+                chatProfileImage.setImageResource(R.drawable.profile_placeholder)
             }
+        } else {
+            chatProfileImage.setImageResource(R.drawable.profile_placeholder)
+        }
+
+        // Set "View Profile" click listener to open the read-only profile view
+        findViewById<TextView>(R.id.view_profile).setOnClickListener {
+            val intent = Intent(this, ViewProfileActivity::class.java)
+            intent.putExtra("profileUserId", otherUserId)
             startActivity(intent)
         }
 
+        // Set up call icons
+        findViewById<ImageView>(R.id.phone_icon).setOnClickListener {
+            val intent = Intent(this, PhoneCallActivity::class.java).apply {
+                putExtra("username", otherUsername)
+                putExtra("profileImage", otherProfileImage)
+            }
+            startActivity(intent)
+        }
         findViewById<ImageView>(R.id.video_call_icon).setOnClickListener {
-            // Launch VideoCallActivity (placeholder for Agora integration)
-            val username = intent.getStringExtra("username") ?: "Unknown"
-            val profileImage = intent.getIntExtra("profileImage", R.drawable.profile_placeholder)
             val intent = Intent(this, VideoCallActivity::class.java).apply {
-                putExtra("username", username)
-                putExtra("profileImage", profileImage)
+                putExtra("username", otherUsername)
+                putExtra("profileImage", otherProfileImage)
             }
             startActivity(intent)
         }
@@ -62,18 +88,27 @@ class ChatBoxActivity : AppCompatActivity() {
             "${currentUserId}_${otherUserId}"
         else
             "${otherUserId}_${currentUserId}"
+
         chatRef = FirebaseDatabase.getInstance().getReference("chats").child(conversationId)
 
-
-        // Initialize adapter and RecyclerView
+        // Initialize RecyclerView and adapter
+        chatRecyclerView = findViewById(R.id.chat_recycler_view)
         chatAdapter = ChatAdapter(messages, currentUserId)
         chatRecyclerView.layoutManager = LinearLayoutManager(this)
         chatRecyclerView.adapter = chatAdapter
 
         loadMessages()
 
+        messageInput = findViewById(R.id.message_input)
+        sendIcon = findViewById(R.id.send_icon)
+
         sendIcon.setOnClickListener {
             sendMessage()
+        }
+
+        // Back button finishes the activity
+        findViewById<ImageView>(R.id.back_icon).setOnClickListener {
+            finish()
         }
     }
 
@@ -87,12 +122,12 @@ class ChatBoxActivity : AppCompatActivity() {
                         messages.add(chat)
                     }
                 }
-                // Sort messages by timestamp (newest at the bottom)
                 messages.sortBy { it.timestampLong }
                 chatAdapter.notifyDataSetChanged()
-                chatRecyclerView.scrollToPosition(messages.size - 1)
+                if (messages.isNotEmpty()) {
+                    chatRecyclerView.scrollToPosition(messages.size - 1)
+                }
             }
-
             override fun onCancelled(error: DatabaseError) {
                 Toast.makeText(this@ChatBoxActivity, "Error loading messages: ${error.message}", Toast.LENGTH_SHORT).show()
             }
@@ -102,10 +137,9 @@ class ChatBoxActivity : AppCompatActivity() {
     private fun sendMessage() {
         val messageText = messageInput.text.toString().trim()
         if (messageText.isNotEmpty()) {
-            val timestamp = System.currentTimeMillis()
-            // Optionally, format the timestamp as desired (e.g., "12:45 PM")
-            val formattedTimestamp = android.text.format.DateFormat.format("hh:mm a", timestamp).toString()
-            val chat = ChatModel(messageText, currentUserId, formattedTimestamp, timestamp)
+            val timestampLong = System.currentTimeMillis()
+            val formattedTimestamp = android.text.format.DateFormat.format("hh:mm a", timestampLong).toString()
+            val chat = ChatModel(messageText, currentUserId, formattedTimestamp, timestampLong)
             chatRef.push().setValue(chat)
                 .addOnSuccessListener {
                     messageInput.setText("")
@@ -116,3 +150,5 @@ class ChatBoxActivity : AppCompatActivity() {
         }
     }
 }
+
+
