@@ -60,7 +60,7 @@ class VideoCallActivity : AppCompatActivity() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var callDuration = 0
-    private lateinit var timerRunnable: Runnable
+    private var timerRunnable: Runnable? = null // Initialized as null to avoid crash
 
     private val PERMISSIONS = arrayOf(
         Manifest.permission.CAMERA,
@@ -107,8 +107,6 @@ class VideoCallActivity : AppCompatActivity() {
         switchToAudioCall = findViewById(R.id.switch_to_audio)
         speakerButton = findViewById(R.id.speaker)
         microphoneButton = findViewById(R.id.microphone)
-
-        // Optionally load profile image (for header display) if needed
 
         remoteVideoView = findViewById(R.id.video_placeholder)
         localVideoView = findViewById(R.id.self_video_preview)
@@ -172,11 +170,13 @@ class VideoCallActivity : AppCompatActivity() {
                 handler.postDelayed(this, 1000)
             }
         }
-        handler.post(timerRunnable)
+        handler.post(timerRunnable!!)
     }
 
     private fun stopCallTimer() {
-        handler.removeCallbacks(timerRunnable)
+        timerRunnable?.let {
+            handler.removeCallbacks(it)
+        }
     }
 
     private fun leaveChannelAndFinish() {
@@ -188,7 +188,7 @@ class VideoCallActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         leaveChannelAndFinish()
+        super.onDestroy()
     }
 }

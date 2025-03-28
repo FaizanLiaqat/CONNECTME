@@ -60,6 +60,7 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation(libs.androidx.espresso.idling.resource)
 
     // REMOVE THESE TWO LINES - they're causing the conflict
     // implementation(libs.firebase.auth)
@@ -79,4 +80,16 @@ dependencies {
     implementation("androidx.camera:camera-view:1.0.0-alpha31")
 
     implementation("io.agora.rtc:full-sdk:4.1.1")
+
+    androidTestImplementation ("androidx.test.espresso:espresso-core:3.5.1")
+
+    // Espresso for UI interactions
+    androidTestImplementation ("androidx.test.espresso:espresso-contrib:3.5.1")
+
+    // JUnit for testing
+    testImplementation ("junit:junit:4.13.2")
+    androidTestImplementation ("androidx.test.ext:junit:1.1.5")
+
+    // Espresso for Firebase UI (if needed)
+    androidTestImplementation ("androidx.test.espresso:espresso-intents:3.5.1")
 }

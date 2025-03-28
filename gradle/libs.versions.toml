@@ -18,6 +18,7 @@ navigationUiKtx = "2.6.0"
 viewpager2 = "1.1.0"
 firebaseAuth = "23.2.0"
 firebaseDatabase = "21.0.0"
+espressoIdlingResource = "3.6.1"
 
 [libraries]
 
@@ -38,6 +39,7 @@ material-v1100 = { module = "com.google.android.material:material", version.ref 
 material-v190 = { module = "com.google.android.material:material", version.ref = "materialVersion" }
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
 firebase-database = { group = "com.google.firebase", name = "firebase-database", version.ref = "firebaseDatabase" }
+androidx-espresso-idling-resource = { group = "androidx.test.espresso", name = "espresso-idling-resource", version.ref = "espressoIdlingResource" }
 
 [plugins]
 google-services = { id = "com.google.gms.google-services", version = "4.4.0" }

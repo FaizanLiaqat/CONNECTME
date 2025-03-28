@@ -18,11 +18,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import io.agora.rtc2.*
 
-class CallViewModel : ViewModel() {
-    var callDuration: Int = 0
-    var isSpeakerOn: Boolean = false
-    var isMicMuted: Boolean = false
-}
+
 
 class PhoneCallActivity : AppCompatActivity() {
 
@@ -208,12 +204,15 @@ class PhoneCallActivity : AppCompatActivity() {
     }
 
     private fun leaveChannelAndFinish() {
-        callTimer.cancel()
+        if (::callTimer.isInitialized) {
+            callTimer.cancel()
+        }
         rtcEngine?.leaveChannel()
         RtcEngine.destroy()
         rtcEngine = null
         finish()
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
@@ -227,4 +226,10 @@ class PhoneCallActivity : AppCompatActivity() {
             Manifest.permission.RECORD_AUDIO
         )
     }
+    class CallViewModel : ViewModel() {
+        var callDuration: Int = 0
+        var isSpeakerOn: Boolean = false
+        var isMicMuted: Boolean = false
+    }
 }
+
