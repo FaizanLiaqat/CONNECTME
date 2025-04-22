@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Base64
 import android.view.SurfaceView
+import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -26,9 +27,9 @@ class VideoCallActivity : AppCompatActivity() {
     private lateinit var speakerButton: ImageView
     private lateinit var microphoneButton: ImageView
 
-    private val appId: String by lazy { getString(R.string.appid) }
-    private val token: String? by lazy { getString(R.string.token) }
-    private val channelName: String by lazy { getString(R.string.channel) }
+    private val appId = "284b934cd2f64382aa7564563b81e8a5"
+    private val channelName = "Practicing"
+    private val token = "007eJxTYMg4vPSngXTjI1lrD4XEZbyyVT+fHuYwZ6n6kP7yrYiekoYCg5GFSZKlsUlyilGamYmxhVFiormpmYmpmXGShWGqRaJp/2H2jIZARgb/7D0sjAwQCOJzMQQUJSaXZCZn5qUzMAAAaLIfZQ=="
 
     private var rtcEngine: RtcEngine? = null
 
@@ -44,12 +45,14 @@ class VideoCallActivity : AppCompatActivity() {
                 startCallTimer()
             }
         }
+
         override fun onUserJoined(uid: Int, elapsed: Int) {
             runOnUiThread {
                 remoteUserUid = uid
                 setupRemoteVideo(uid)
             }
         }
+
         override fun onUserOffline(uid: Int, reason: Int) {
             runOnUiThread { removeRemoteVideo() }
         }
@@ -147,8 +150,11 @@ class VideoCallActivity : AppCompatActivity() {
     }
 
     private fun setupRemoteVideo(uid: Int) {
-        rtcEngine?.setupRemoteVideo(VideoCanvas(remoteVideoView, VideoCanvas.RENDER_MODE_FIT, uid))
-        remoteVideoView.visibility = SurfaceView.VISIBLE
+        // Ensure that the remote video view is only set once the user joins
+        if (remoteVideoView.visibility != View.VISIBLE) {
+            rtcEngine?.setupRemoteVideo(VideoCanvas(remoteVideoView, VideoCanvas.RENDER_MODE_FIT, uid))
+            remoteVideoView.visibility = SurfaceView.VISIBLE
+        }
     }
 
     private fun removeRemoteVideo() {

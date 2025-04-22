@@ -79,7 +79,7 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:1.0.0-alpha31")
 
-    implementation("io.agora.rtc:full-sdk:4.1.1")
+    implementation("io.agora.rtc:full-sdk:4.5.0")
 
     androidTestImplementation ("androidx.test.espresso:espresso-core:3.5.1")
 

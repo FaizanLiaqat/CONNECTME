@@ -1,0 +1,21 @@
+[33mf435f89[m[33m ([m[1;36mHEAD[m[33m, [m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m HEAD@{0}: rebase (start): checkout origin/main
+[33mc048a28[m[33m ([m[1;31morigin/localfaizan[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mlocalfaizan[m[33m)[m HEAD@{1}: checkout: moving from localfaizan to localfaizan
+[33mc048a28[m[33m ([m[1;31morigin/localfaizan[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mlocalfaizan[m[33m)[m HEAD@{2}: checkout: moving from main to localfaizan
+[33mf435f89[m[33m ([m[1;36mHEAD[m[33m, [m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m HEAD@{3}: checkout: moving from localfaizan to main
+[33mc048a28[m[33m ([m[1;31morigin/localfaizan[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mlocalfaizan[m[33m)[m HEAD@{4}: commit: test cases implemented
+[33m6eeedbe[m HEAD@{5}: pull origin localfaizan: Fast-forward
+[33mc6f5bec[m HEAD@{6}: commit: recent searches implemented
+[33mdcd09ea[m HEAD@{7}: commit: home page done
+[33m54a63c9[m HEAD@{8}: commit: post and stories
+[33m186a2e2[m HEAD@{9}: commit: testing
+[33m813ff29[m HEAD@{10}: commit: testing
+[33mae6f405[m HEAD@{11}: commit: testing
+[33mc272cf8[m HEAD@{12}: checkout: moving from main to localfaizan
+[33mf435f89[m[33m ([m[1;36mHEAD[m[33m, [m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m HEAD@{13}: checkout: moving from localfaizan to main
+[33mc272cf8[m HEAD@{14}: reset: moving to HEAD
+[33mc272cf8[m HEAD@{15}: checkout: moving from main to localfaizan
+[33mf435f89[m[33m ([m[1;36mHEAD[m[33m, [m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m HEAD@{16}: checkout: moving from localfaizan to main
+[33mc272cf8[m HEAD@{17}: checkout: moving from localfaizan to localfaizan
+[33mc272cf8[m HEAD@{18}: checkout: moving from main to localfaizan
+[33mf435f89[m[33m ([m[1;36mHEAD[m[33m, [m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m HEAD@{19}: checkout: moving from localfaizan to main
+[33mc272cf8[m HEAD@{20}: commit (initial): Recreated project and added new implementation

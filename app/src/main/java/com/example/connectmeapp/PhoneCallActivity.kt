@@ -35,10 +35,16 @@ class PhoneCallActivity : AppCompatActivity() {
     private lateinit var speakerButton: ImageView
     private lateinit var microphoneButton: ImageView
 
+    private val PERMISSION_REQ_ID = 22
+
+
+
+    private var mRtcEngine: RtcEngine? = null
     // Agora configuration
-    private val appId: String by lazy { getString(R.string.appid) }
-    private val token: String? by lazy { getString(R.string.token) }
-    private val channelName: String by lazy { getString(R.string.channel) }
+    private val appId = "284b934cd2f64382aa7564563b81e8a5"
+    private val channelName = "Practicing"
+    private val token = "007eJxTYMg4vPSngXTjI1lrD4XEZbyyVT+fHuYwZ6n6kP7yrYiekoYCg5GFSZKlsUlyilGamYmxhVFiormpmYmpmXGShWGqRaJp/2H2jIZARgb/7D0sjAwQCOJzMQQUJSaXZCZn5qUzMAAAaLIfZQ=="
+
 
     private val rtcEventHandler = object : IRtcEngineEventHandler() {
         override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
