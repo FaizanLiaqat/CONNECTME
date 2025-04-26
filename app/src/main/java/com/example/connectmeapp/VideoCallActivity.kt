@@ -37,7 +37,7 @@ class VideoCallActivity : AppCompatActivity() {
 
     private val appId = "284b934cd2f64382aa7564563b81e8a5"
     private val channelName = "Practicing"
-    private val token = "007eJxTYHhrl3H/q2zP5fvNyd4c86y4d5z6t+DYXt6r0i3HX6sd7FyqwGBkYZJkaWySnGKUZmZibGGUmGhuamZiamacZGGYapFo2izPndEQyMhgvOsiCyMDBIL4XAwBRYnJJZnJmXnpDAwAnpUi0Q=="
+    private val token = "007eJxTYCjZEDVt16+oM39U52fMDdrqcINrR6jIHeuPvmGC29ojrvArMBhZmCRZGpskpxilmZkYWxglJpqbmpmYmhknWRimWiSaPlnOk9EQyMjAeKCbgREKQXwuhoCixOSSzOTMvHQGBgA6yCGt"
 
     private var remoteUserUid: Int = 0
     private var isSpeakerOn = false
@@ -92,8 +92,11 @@ class VideoCallActivity : AppCompatActivity() {
         microphoneButton = findViewById(R.id.microphone)
 
         // Video Containers
-        remoteVideoContainer = findViewById(R.id.video_placeholder)
-        localVideoContainer = findViewById(R.id.self_video_preview)
+        remoteVideoView = findViewById(R.id.video_placeholder)
+        localVideoView = findViewById(R.id.self_video_preview)
+
+        remoteVideoContainer = findViewById(R.id.video_placeholder_container)
+        localVideoContainer = findViewById(R.id.self_video_preview_container)
 
         endCallButton.setOnClickListener { leaveChannelAndFinish() }
         switchToAudioCall.setOnClickListener {
@@ -135,40 +138,21 @@ class VideoCallActivity : AppCompatActivity() {
     private fun setupLocalVideo() {
         AgoraManager.getEngine()?.enableVideo()
 
-        // Create a SurfaceView to display local video
-        val localVideoView = SurfaceView(this)
+        // Use the existing SurfaceView instead of creating a new one
         localVideoView.setZOrderMediaOverlay(true)
-        localVideoView.layoutParams = RelativeLayout.LayoutParams(
-            RelativeLayout.LayoutParams.MATCH_PARENT,
-            RelativeLayout.LayoutParams.MATCH_PARENT
-        )
 
-        localVideoContainer.addView(localVideoView)
-
-        // Setup local video stream on the SurfaceView
+        // Setup local video stream on the existing SurfaceView
         AgoraManager.getEngine()?.setupLocalVideo(VideoCanvas(localVideoView, VideoCanvas.RENDER_MODE_FIT, 0))
     }
 
     private fun setupRemoteVideo(uid: Int) {
-        // Only create a new remote video view if none exists
-        if (remoteVideoContainer.childCount == 0) {
-            val remoteVideoView = SurfaceView(this)
-            remoteVideoView.layoutParams = RelativeLayout.LayoutParams(
-                RelativeLayout.LayoutParams.MATCH_PARENT,
-                RelativeLayout.LayoutParams.MATCH_PARENT
-            )
-            remoteVideoContainer.addView(remoteVideoView)
-
-            // Setup remote video stream on the SurfaceView
-            AgoraManager.getEngine()?.setupRemoteVideo(VideoCanvas(remoteVideoView, VideoCanvas.RENDER_MODE_FIT, uid))
-        }
+        // Use the existing SurfaceView for remote video
+        AgoraManager.getEngine()?.setupRemoteVideo(VideoCanvas(remoteVideoView, VideoCanvas.RENDER_MODE_FIT, uid))
     }
 
     private fun removeRemoteVideo() {
-        // Remove remote video if it exists
-        if (remoteVideoContainer.childCount > 0) {
-            remoteVideoContainer.removeAllViews()
-        }
+        // Reset the remote video
+        AgoraManager.getEngine()?.setupRemoteVideo(null)
     }
 
     private fun joinChannel() {

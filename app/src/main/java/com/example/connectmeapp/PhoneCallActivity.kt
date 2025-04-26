@@ -43,7 +43,7 @@ class PhoneCallActivity : AppCompatActivity() {
     // Agora configuration
     private val appId = "284b934cd2f64382aa7564563b81e8a5"
     private val channelName = "Practicing"
-    private val token = "007eJxTYHhrl3H/q2zP5fvNyd4c86y4d5z6t+DYXt6r0i3HX6sd7FyqwGBkYZJkaWySnGKUZmZibGGUmGhuamZiamacZGGYapFo2izPndEQyMhgvOsiCyMDBIL4XAwBRYnJJZnJmXnpDAwAnpUi0Q=="
+    private val token = "007eJxTYCjZEDVt16+oM39U52fMDdrqcINrR6jIHeuPvmGC29ojrvArMBhZmCRZGpskpxilmZkYWxglJpqbmpmYmhknWRimWiSaPlnOk9EQyMjAeKCbgREKQXwuhoCixOSSzOTMvHQGBgA6yCGt"
 
     private val rtcEventHandler = object : IRtcEngineEventHandler() {
         override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
