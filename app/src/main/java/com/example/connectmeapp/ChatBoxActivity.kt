@@ -22,6 +22,10 @@ class ChatBoxActivity : AppCompatActivity() {
     private lateinit var messageInput: EditText
     private lateinit var sendIcon: ImageView
 
+    private lateinit var statusText: TextView
+    private lateinit var presenceRef: DatabaseReference
+
+
     private val messages = mutableListOf<ChatModel>()
 
     private lateinit var currentUserId: String
@@ -45,6 +49,11 @@ class ChatBoxActivity : AppCompatActivity() {
 
         // Set the chat username at the top of the activity
         findViewById<TextView>(R.id.chat_username).text = otherUsername
+
+        statusText = findViewById(R.id.chat_username)
+        updateStatusText("…") // placeholder
+
+
 
         // Load other person's profile image into the chat header
         val chatProfileImage = findViewById<CircleImageView>(R.id.chat_profile_image)
@@ -90,6 +99,15 @@ class ChatBoxActivity : AppCompatActivity() {
             "${otherUserId}_${currentUserId}"
 
         chatRef = FirebaseDatabase.getInstance().getReference("chats").child(conversationId)
+
+        val convId = listOf(currentUserId, otherUserId).sorted().joinToString("_")
+        chatRef      = FirebaseDatabase.getInstance().getReference("chats").child(convId)
+        presenceRef  = FirebaseDatabase.getInstance().getReference("presence")
+
+        monitorOtherUserPresence()
+
+        loadMessages()
+        setMyPresenceOnline()
 
         // Initialize RecyclerView and adapter
         chatRecyclerView = findViewById(R.id.chat_recycler_view)
@@ -148,6 +166,33 @@ class ChatBoxActivity : AppCompatActivity() {
                     Toast.makeText(this, "Error sending message: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
         }
+    }
+
+    private fun monitorOtherUserPresence() {
+        presenceRef.child(otherUserId)
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snap: DataSnapshot) {
+                    val status = snap.getValue(String::class.java) ?: "offline"
+                    updateStatusText("$otherUsername (${status})")
+                }
+                override fun onCancelled(err: DatabaseError) {}
+            })
+    }
+
+    private fun setMyPresenceOnline() {
+        presenceRef.child(currentUserId).setValue("online")
+    }
+    private fun setMyPresenceOffline() {
+        presenceRef.child(currentUserId).setValue("offline")
+    }
+
+    private fun updateStatusText(text: String) {
+        statusText.text = text
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        setMyPresenceOffline()
     }
 }
 
